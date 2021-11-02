@@ -1,37 +1,40 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
 
-blogsRouter.get('/', (request, response) => {
-    Blog
-      .find({})
-      .then(blogs => {
-        response.json(blogs)
-      })
+blogsRouter.get('/', async (request, response) => {
+    const allBlogs = await Blog.find({})
+    response.json(allBlogs)
   })
   
-blogsRouter.get('/:id', (request, response, next) => {
-      Blog.findById(request.params.id)
-      .then(returnedBlog => response.json(returnedBlog))
-      .catch(error => next(error))
+blogsRouter.get('/:id', async (request, response) => {
+    const returnedBlog = await Blog.findById(request.params.id)
+    response.json(returnedBlog)
   })
   
-blogsRouter.post('/', (request, response) => {
-    const blog = new Blog(request.body)
-    blog
-      .save()
-      .then(result => {
-        response.status(201).json(result)
-      })
+blogsRouter.post('/', async (request, response) => {
+    const blogToAdd = request.body
+    if (!blogToAdd.likes) {
+      blogToAdd.likes = 0
+    }
+    const blog = new Blog(blogToAdd)
+    const result = await blog.save()
+    response.status(201).json(result)
   })
-blogsRouter.delete('/:id', (request, response, next) => {
-      Blog.findByIdAndRemove(request.params.id)
-      .then(removedObj => response.status(204).end())
-      .catch(error => next(error))
+
+blogsRouter.delete('/:id', async (request, response) => {
+    await Blog.findByIdAndRemove(request.params.id)
+    response.status(204).end()
   })
-blogsRouter.put('/:id', (request, response, next) => {
-      Blog.findByIdAndUpdate(request.params.id)
-      .then(updatedNote => response.json(updatedNote))
-      .catch(error => next(error))
+blogsRouter.put('/:id', async (request, response) => {
+    const body = request.body
+    const newNote = {
+      title: body.title,
+      url: body.url,
+      author: body.author,
+      likes: body.likes
+    }
+    const updatedNote = await Blog.findByIdAndUpdate(request.params.id, newNote, { new: true })
+    response.json(updatedNote)
   })
 
 module.exports = blogsRouter
