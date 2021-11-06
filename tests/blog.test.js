@@ -121,6 +121,93 @@ test('updating a valid blog post', async () => {
 
 })
 
+describe('user creation', () => {
+    test('username must be given', async () => {
+        const allUsersInDbStart = await helper.usersInDb()
+        const invalidUser = {
+            name: "Whatever",
+            password: "cho"
+        }
+        try {
+            await api
+            .post('/api/users')
+            .send(invalidUser)
+            .expect(400)
+        } catch (error) {
+            expect(error).toEqual({
+                error: "User validation failed: username: Path `username` is required."
+            })
+        }
+        const allUsersInDbEnd = await helper.usersInDb()
+        expect(allUsersInDbEnd).toHaveLength(allUsersInDbStart.length)
+    }
+    )
+    test('password must be given', async () => {
+        const allUsersInDbStart = await helper.usersInDb()
+        const invalidUser = {
+            username: "thiscanbe",
+            name: "Whatever"
+        }
+        try {
+            await api
+            .post('/api/users')
+            .send(invalidUser)
+            .expect(400)
+        } catch (error) {
+            expect(error).toEqual({
+                error: 'Both username and password must be specified'
+            })
+        }
+        const allUsersInDbEnd = await helper.usersInDb()
+        expect(allUsersInDbEnd).toHaveLength(allUsersInDbStart.length)  
+    }
+    )
+
+    test('username must be at least 3 characters long', async () => {
+        const allUsersInDbStart = await helper.usersInDb()
+        const invalidUser = {
+            username: "th",
+            name: "Whatever",
+            password: "aoshioahsdo"
+        }
+        await api
+            .post('/api/users')
+            .send(invalidUser)
+            .expect(400)
+        const allUsersInDbEnd = await helper.usersInDb()
+        expect(allUsersInDbEnd).toHaveLength(allUsersInDbStart.length)  
+    })
+    test('password must be at least 3 characters long', async () => {
+        const allUsersInDbStart = await helper.usersInDb()
+        const invalidUser = {
+            username: "thea",
+            name: "Whatever",
+            password: "ao"
+        }
+        await api
+            .post('/api/users')
+            .send(invalidUser)
+            .expect(400)
+        const allUsersInDbEnd = await helper.usersInDb()
+        expect(allUsersInDbEnd).toHaveLength(allUsersInDbStart.length)  
+    })
+
+    test('username must be unique', async () => {
+        const allUsersInDbStart = await helper.usersInDb()
+        const invalidUserLast = {
+            username: "klee864",
+            name: "Whatever",
+            password: "aoas"
+        }
+        await api
+            .post('/api/users')
+            .send(invalidUserLast)
+            .expect(400)
+        const allUsersInDbEnd = await helper.usersInDb()
+        expect(allUsersInDbEnd).toHaveLength(allUsersInDbStart.length)  
+    })
+})
+
 
 afterAll(() => {
     mongoose.connection.close()
