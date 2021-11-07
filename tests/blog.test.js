@@ -3,7 +3,7 @@ const helper = require('./test_helper')
 const app = require('../app')
 const Blog = require('../models/blog')
 const supertest = require('supertest')
-
+const User = require('../models/user')
 
 const api = supertest(app)
 
@@ -40,22 +40,54 @@ test('able to create a new valid blog', async() => {
     const allBlogsBefore = await helper.blogsInDb()
     // console.log('before')
     // console.log(allBlogsBefore)
-    const newBlog = {
-        title: 'testing adding blog',
-        author: 'Tracey Mai',
-        url: 'www.facebook.com',
-        likes: 0
+    const userLogin = {
+        username: "klee869",
+        password: "idkaboutthis"
     }
-    await api.post('/api/blogs')
+    const tokenResp = await api
+    .post('/api/login')
+    .send(userLogin)
+    .expect(200)
+    .expect('Content-Type', /application\/json/)
+    const userInDb = await User.findOne({ username: tokenResp.body.username })
+    const userInDbBlogsBefore = userInDb.blogs
+    expect(tokenResp.body.username).toBe(userLogin.username)
+    const loginToken = 'Bearer '.concat(tokenResp.body.token)
+    const newBlog = {
+        title: 'testing adding blog after token auth hasn"t worked',
+        author: 'Tracey Mai',
+        url: 'www.facebook.com'
+    }
+    console.log(loginToken)
+    const addedBlog = await api.post('/api/blogs')
+    .set({'Authorization': loginToken})
     .send(newBlog)
     .expect(201)
     .expect('Content-Type', /application\/json/)
+    // console.log(prom)
+    // await prom.expect(201)
+    // .expect('Content-Type', /application\/json/)
 
     const allBlogsInDb = await helper.blogsInDb()
+    const userInDbAfter = await User.findOne({ username: tokenResp.body.username })
+    const usersInDbBlogsAfter = userInDbAfter.blogs
     // console.log(allBlogsInDb)
     const allTitlesInDb = allBlogsInDb.map(eachBlog => eachBlog.title)
     expect(allBlogsInDb).toHaveLength(allBlogsBefore.length + 1)
-    expect(allTitlesInDb).toContain('testing adding blog')
+    expect(usersInDbBlogsAfter).toHaveLength(userInDbBlogsBefore.length + 1)
+    expect(allTitlesInDb).toContain(addedBlog.body.title)
+    expect(addedBlog.body.user.toString()).toEqual(userInDb._id.toString())
+}, 700000)
+
+test('a blog fails with status code 401 if token is not provided', async () => {
+    const newBlogFails = {
+        title: 'testing blog fails without token',
+        author: 'Tracey Mai',
+        url: 'www.facebook.com'
+    }
+    await api.post('/api/blogs')
+    .send(newBlogFails)
+    .expect(401)
 })
 
 test('if likes property is missing in the request, it will default to 0', async () => {
@@ -205,6 +237,22 @@ describe('user creation', () => {
             .expect(400)
         const allUsersInDbEnd = await helper.usersInDb()
         expect(allUsersInDbEnd).toHaveLength(allUsersInDbStart.length)  
+    })
+    test('able to create new valid user', async () => {
+        const allUsersInDbStart = await helper.usersInDb()
+        const validUser = {
+            username: "klee869",
+            name: "Kiwoong Lee",
+            password: "idkaboutthis"
+        }
+        await api
+            .post('/api/users')
+            .send(validUser)
+            .expect(200)
+        const allUsersInDbEnd = await helper.usersInDb()
+        expect(allUsersInDbEnd).toHaveLength(allUsersInDbStart.length+1)
+        const allNames = allUsersInDbEnd.map(u => u.name)
+        expect(allNames).toContain(validUser.name)  
     })
 })
 
