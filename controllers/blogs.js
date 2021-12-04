@@ -21,6 +21,13 @@ blogsRouter.get('/:id', async (request, response) => {
     const returnedBlog = await Blog.findById(request.params.id).populate('user', { username: 1, name: 1 })
     response.json(returnedBlog)
   })
+
+blogsRouter.get('/:id/comments', async (request, response) => {
+  const returnedBlog = await Blog.findById(request.params.id).populate('user', { username: 1, name: 1 })
+  if (returnedBlog.comment) {
+    return response.send(returnedBlog.comment)
+  } return null
+})
   
 blogsRouter.post('/', async (request, response) => {
     const blogToAdd = request.body
@@ -32,12 +39,16 @@ blogsRouter.post('/', async (request, response) => {
     if (!blogToAdd.likes) {
       blogToAdd.likes = 0
     }
+    if (!blogToAdd.comments) {
+      blogToAdd.comments = []
+    }
     const blog = new Blog({
       title: blogToAdd.title,
       author: user.name,
       url: blogToAdd.url,
       likes: blogToAdd.likes,
-      user: user._id
+      user: user._id,
+      comments: blogToAdd.comments
     })
     const result = await blog.save()
     user.blogs = user.blogs.concat(result)
@@ -65,9 +76,10 @@ blogsRouter.put('/:id', async (request, response) => {
       title: body.title,
       url: body.url,
       author: body.author,
-      likes: body.likes
+      likes: body.likes,
+      comments: body.comments
     }
-    const updatedNote = await Blog.findByIdAndUpdate(request.params.id, newNote, { new: true })
+    const updatedNote = await Blog.findByIdAndUpdate(request.params.id, newNote, { new: true }).populate('user', { username: 1, name: 1 })
     response.json(updatedNote)
   })
 
